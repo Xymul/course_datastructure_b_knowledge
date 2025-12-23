@@ -1,3 +1,8 @@
+>[!NOTE] 关于本文档
+> 如果你要打开本文档，只推荐在VS Code + [Markdown All in One 插件](https://github.com/yzhang-gh/vscode-markdown.git)下打开；或者打开从本文档导出的HTML文件。否则，
+> 
+> 本文档不保证被其他markdown软件正确渲染，尤其是**混用HTML标签与markdown标签**的部分。
+
 # Project Info
 
 ## What is the Project
