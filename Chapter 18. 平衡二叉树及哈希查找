@@ -1,0 +1,319 @@
+# 平衡二叉树及哈希查找
+
+## 平衡二叉树——AVL树
+
+### AVL树的性质
+
+- AVL树是一种特殊的BST树
+
+- 对于任意节点，其平衡因子(BF)为-1,0或1
+
+- AVL树不一定是完全二叉树
+
+### AVL树的插入操作
+
+向AVL树插入节点以后，可能会导致树的失去平衡性（即有些节点的 |BF|>1），那么这个时候，就要进行调整，使得树重新回到平衡的状态。
+
+调整的思想就是，找到**最小不平衡子树**，也就是插入新的节点后，以距离插入结点最近且BF绝对值大于1的结点为根的子树，对这个子树进行调整就能够使整个树平衡。
+
+<details>
+<summary>DeepSeek解释具体原因</summary>
+<blockquote>
+这是一个非常好的问题，它触及了AVL树操作正确性的核心。答案是：**是的，当我们将这个“最小不平衡子树”旋转到平衡状态后，整个AVL树的所有节点都将恢复平衡。**
+
+我们来详细解释一下为什么：
+
+### 核心概念：最小不平衡子树
+*   **最小**：指的是从插入点向上搜索，**第一个**遇到的不平衡的节点（其平衡因子为2或-2）。以这个节点为根的子树，就是“最小不平衡子树”。
+*   **局部性**：不平衡是由插入操作引起的，并且影响是**从插入点自底向上传播**的。这个“最小不平衡”节点是平衡被破坏的源头。
+
+### 关键原因：旋转操作的本质
+AVL树的四种旋转（LL, RR, LR, RL）不仅仅是为了让这个子树平衡，它们还有一个极其重要的特性：**旋转完成后，这个“最小不平衡子树”的“高度”会恢复到插入前的状态。**
+
+让我们分解一下这个过程：
+
+1.  **插入前**：整棵树是平衡的。最小不平衡子树（记作以A为根）本身当时也是平衡的，假设其高度为 `h`。
+2.  **插入后**：新节点被添加到A的某个子孙节点下。这导致A的左右子树高度差变为2，A成为不平衡的根。同时，**以A为根的子树的高度从 `h` 增加到了 `h+1`**。正是这个“高度增加1”的效果，可能会向上影响A的父节点、祖先节点的平衡。
+3.  **执行旋转**：我们针对以A为根的最小不平衡子树进行旋转（例如单旋或双旋）。
+    *   **重新平衡**：旋转操作首先解决了A节点本身的不平衡。
+    *   **高度复原**：**最关键的一点是，旋转后，新的子树根节点（例如B）的高度会变回 `h`**。也就是说，这棵子树的总高度**恢复到了插入发生之前的高度**。
+
+### 为什么其他节点也平衡了？
+因为“高度复原”：
+*   **对于A的父节点及以上祖先**：在插入后，它们感受到的是“以A为根的子树高度增加了1”。现在，经过旋转，以新的B为根的子树高度又变回了原来的 `h`。对于A的父节点来说，就好像“插入操作引起的高度增加”这个事件被**局部化处理并消除**了。它的左右子树高度差不会因为这次旋转而恶化，**反而会恢复到插入前的状态**。
+*   **对于最小不平衡子树内部的节点**：旋转操作重新组织了这棵子树内的节点关系，所有节点在旋转后都会被正确平衡（这是旋转操作定义所保证的）。
+*   **对于树的其他部分（与最小不平衡子树无关的子树）**：它们根本不受影响，因为旋转操作只涉及常数个节点的指针改动，范围仅限于这棵最小不平衡子树之内。
+
+### 一个简单的比喻
+想象一棵以A为根的子树是一个弹簧装置。插入节点就像在它底部轻轻压了一下，导致它整体**变高了一点**，并且自身歪了（不平衡）。
+旋转操作就像是把这个弹簧装置**重新整理、加固了一下**。整理之后：
+1.  它本身不歪了（平衡了）。
+2.  **它的总高度又回到了被压之前的高度**。
+那么，原来因为它变高、变歪而受到影响的上一级平台（A的父节点），现在自然也恢复平稳了。
+
+### 总结与结论
+所以，AVL树插入后的调整算法之所以正确且高效，正是基于这个特性：
+1.  **自底向上**：沿着插入路径回溯。
+2.  **找到第一个（最小）不平衡子树**。
+3.  **对其进行一次（且仅需一次）旋转**。
+4.  这次旋转在**平衡该子树的同时，使其高度复原**，从而一次性解决了所有向上的不平衡问题。无需对祖先节点进行额外的旋转。
+
+因此，你只需要旋转那个“最小不平衡子树”，整棵树就会重新达到全局平衡。这是AVL树设计中非常精妙的一点。
+</blockquote>
+</details>
+
+#### 失衡类型与调整方法
+
+LL失衡：插入的节点在最小不平衡子树根节点的**左节点的左子树**上，例如：
+<pre>
+<code>                <span style="color:orange">25</span> ---------- bf: 2
+               /  \
+              <span style="color:red">12</span>  <span style="color:blue">48</span> -------- bf: 1, 0
+             /  \
+            <span style="color:red">11</span>   <span style="color:red">16</span>  -------- bf: 1, 0
+           /
+         [<span style="color:red">9</span>] ---------------- bf: 0
+</code></pre>
+
+调整方法：对节点25进行右旋操作
+
+步骤：
+- 将16作为25的左节点
+- 将25作为12的右节点
+
+调整后：
+<pre>
+<code>                <span style="color:orange">12</span> ----------- bf: 0
+               /  \
+              <span style="color:red">11</span>  <span style="color:blue">25</span> --------- bf: 1, 0
+             /    / \
+            <span style="color:red">9</span>    <span style="color:blue">16</span> <span style="color:blue">48</span> ------- bf: 0, 0, 0
+</code></pre>
+
+用代码实现，就是：
+```cpp
+typedef struct node { node* left; node* right; int n; } node_t;
+
+node_t* right_rotate(node_t* n)
+{
+  node_t* l = n->left;
+  node_t* lr = l->right;
+
+  n->left = lr;
+  l->right = n;
+
+  return l; // 返回旋转后子树的根节点
+}
+```
+
+RR失衡：插入的节点在最小不平衡子树根节点的**右节点的右子树**上，例如：
+<pre>
+<code>                <span style="color:orange">25</span> ---------------- bf: -2
+               /  \
+              <span style="color:red">12</span>  <span style="color:blue">48</span> -------------- bf: 0, -1
+                  / \
+                <span style="color:blue">36</span>   <span style="color:blue">49</span> ----------- bf: 0, -1
+                       \
+                      [<span style="color:blue">60</span>] -------- bf: 0
+
+</code></pre>
+
+调整方法：对节点25进行左旋操作
+
+步骤：
+- 将36作为25的右节点
+- 将25作为48的左节点
+
+调整后：
+<pre>
+<code>                <span style="color:orange">48</span> ---------------- bf: 0
+               /  \
+              <span style="color:red">25</span>  <span style="color:blue">49</span> -------------- bf: 0, -1
+             /  \   \
+            <span style="color:red">12</span>  <span style="color:red">36</span>   <span style="color:blue">60</span> ----------- bf: 0, 0, 0
+
+</code></pre>
+
+用代码实现，就是：
+```cpp
+typedef struct node { node* left; node* right; int n; } node_t;
+
+node_t* left_rotate(node_t* n)
+{
+  node_t* r = n->right;
+  node_t* rl = r->left;
+
+  n->right = rl;
+  r->left = n;
+
+  return r; // 返回旋转后子树的根节点
+}
+```
+
+LR失衡：插入的节点在最小不平衡子树根节点的**左节点的右子树**上，例如：
+<pre>
+<code>                <span style="color:orange">25</span> ---------- bf: 2
+               /  \
+              <span style="color:yellow">12</span>  <span style="color:blue">48</span> -------- bf: -1, 0
+             /  \
+            <span style="color:pink">11</span>   <span style="color:cyan">16</span>  -------- bf: 0, 1
+                /
+              [<span style="color:cyan">14</span>] ---------- bf: 0
+</code></pre>
+
+调整方法：先调整为LL型失衡，然后再进行右旋操作
+
+步骤：
+- 选取左子树的根节点，即12，然后对12进行左旋操作
+- 然后对25进行右旋操作
+
+第一步调整后：
+<pre>
+<code>                <span style="color:orange">25</span> ---------- bf: 2
+               /  \
+              <span style="color:yellow">16</span>  <span style="color:blue">48</span> -------- bf: 2, 0
+             /
+            <span style="color:pink">12</span> -------------- bf: 0
+           / \
+          <span style="color:pink">11</span> <span style="color:pink">14</span> ------------- bf: 0, 0
+</code></pre>
+
+第二步调整后：
+<pre>
+<code>                <span style="color:orange">16</span> ---------- bf: 0
+               /  \
+              <span style="color:red">12</span>  <span style="color:blue">25</span> -------- bf: 0, -1
+             / \   \
+            <span style="color:red">11</span> <span style="color:red">14</span>  <span style="color: blue">48</span> ------- bf: 0, 0, 0
+</code></pre>
+
+代码实现为：
+```cpp
+root->left = left_rotate(root->left);
+right_rotate(root);
+```
+
+RL失衡：插入的节点在最小不平衡子树根节点的**右节点的左子树**上，例如：
+<pre>
+<code>                <span style="color:orange">25</span> ---------- bf: -2
+               /  \
+              <span style="color:red">12</span>  <span style="color:yellow">48</span> -------- bf: 0, 1
+                 /  \
+               <span style="color:pink">36</span>   <span style="color:cyan">49</span>  ----- bf: -1, 0
+                 \
+                [<span style="color:cyan">40</span>] -------- bf: 0
+</code></pre>
+
+调整方法：先调整为RR型失衡，然后再进行左旋操作
+
+步骤：
+- 选取右子树的根节点，即48，然后对48进行右旋操作
+- 然后对25进行左旋操作
+
+第一步调整后：
+<pre>
+<code>                <span style="color:orange">25</span> ---------- bf: -2
+               /  \
+              <span style="color:red">12</span>  <span style="color:yellow">36</span> -------- bf: 0, -2
+                    \
+                    <span style="color:cyan">48</span>  ----- bf: 0
+                    / \
+                  <span style="color:cyan">40</span>  <span style="color:cyan">49</span> ---- bf: 0, 0
+</code></pre>
+
+第二步调整后：
+<pre>
+<code>                <span style="color:orange">36</span> ---------- bf: 0
+               /  \
+              <span style="color:red">25</span>  <span style="color:blue">48</span> -------- bf: 1, 0
+             /    / \
+           <span style="color:red">12</span>    <span style="color:blue">40</span> <span style="color:blue">49</span>  ----- bf: 0, 0, 0
+</code></pre>
+
+代码实现为：
+```cpp
+root->right = right_rotate(root->right);
+left_rotate(root);
+```
+
+简单地看，实际上左旋、右旋操作只涉及到三个连接关系的改变：
+
+对于左旋而言：
+<pre><code>     O                     O
+     <span style="color:pink">|</span>                     <span style="color:pink">|</span>
+     A                     B
+    <span style="color:red">/</span> \                     <span style="color:red">\</span>
+   B   C    =========>       A
+    <span style="color:cyan">\</span>                       <span style="color:cyan">/</span> \
+     D                     D   C
+</pre></code>
+
+#### 手动插入过程示例
+
+这里有一个初始平衡的AVL树
+
+```
+            10
+       /         \
+      6           15
+     /  \        /  \
+    2     8     12   18
+   / \   / \   / \   / \
+  1   3 7   9 11 13 16 20
+       \
+        4
+```
+
+现在插入了一个节点5，按照二叉搜索树的插入规则，插入后的树应该为：
+```
+            10
+       /         \
+      6           15
+     /  \        /  \
+    2     8     12   18
+   / \   / \   / \   / \
+  1   3 7   9 11 13 16 20
+       \
+        4
+         \
+          5
+```
+节点5位于4的右子树上。
+
+节点5插入后，其父节点4的右子树高度变为1，左子树高度仍然为0，所以节点4的平衡因子为-1，仍然平衡。
+<pre>
+<code>        <span style="color:orange">4</span>
+         \
+          <span style="color:blue">5</span>
+</code></pre>
+
+然后再往上看，对于节点<span style="color:orange">3</span>，这时它的左子树高度为0，右子树高度为2，平衡因子为-2，不平衡，所以要对节点3进行调整
+<pre>
+<code>      <span style="color:orange">3</span>
+       \
+        <span style="color:blue">4</span>
+         \
+          <span style="color:blue">5</span>
+</code></pre>
+
+由于插入的节点5位于节点3**右节点的右子树**上，属于RR型失衡，所以要对节点3进行一次左旋操作：
+<pre>
+<code>      <span style="color:orange">4</span>
+     / \
+    <span style="color: red">3</span>   <span style="color:blue">5</span>
+</code></pre>
+
+那么旋转之后的整个树为：
+```
+            10
+       /         \
+      6           15
+     /  \        /  \
+    2     8     12   18
+   / \   / \   / \   / \
+  1   4 7   9 11 13 16 20
+     / \
+    3   5
+```
+
+可以看到，这个树平衡了。
