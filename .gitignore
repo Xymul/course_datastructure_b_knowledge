@@ -1,5 +1,8 @@
 /out/*
+/build/*
 
 *.lua
 
 makefile
+
+compile_commands.json
